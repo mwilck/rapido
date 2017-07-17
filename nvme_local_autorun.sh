@@ -18,21 +18,8 @@ if [ ! -f /vm_autorun.env ]; then
 fi
 
 . /vm_autorun.env
-
-function _zram_hot_add() {
-	[ -e /sys/class/zram-control/hot_add ] \
-		|| _fatal "zram hot_add sysfs path missing (old kernel?)"
-
-	local zram_size="$1"
-	local zram_num=$(cat /sys/class/zram-control/hot_add) \
-		|| _fatal "zram hot add failed"
-	local zram_dev="/dev/zram${zram_num}"
-
-	echo "$zram_size" > \
-		/sys/devices/virtual/block/zram${zram_num}/disksize \
-		|| _fatal "failed to set size for $zram_dev"
-	echo "$zram_dev"
-}
+. /usr/lib/rapido/zram.sh
+. /usr/lib/rapido/nvme.sh
 
 set -x
 
@@ -55,7 +42,6 @@ modprobe nvme-core
 modprobe nvme-fabrics
 modprobe nvme-loop
 modprobe nvmet
-modprobe zram num_devices="0"
 
 for i in $DYN_DEBUG_MODULES; do
 	echo "module $i +pf" > /sys/kernel/debug/dynamic_debug/control || _fatal
@@ -67,27 +53,24 @@ done
 export_blockdev=$(_zram_hot_add "1G")
 [ -b "$export_blockdev" ] || _fatal "$export_blockdev device not available"
 
-nvmet_cfs="/sys/kernel/config/nvmet/"
-nvmet_subsystem="nvmf-test"
-mkdir -p ${nvmet_cfs}/subsystems/${nvmet_subsystem} || _fatal
-echo 1 > ${nvmet_cfs}/subsystems/${nvmet_subsystem}/attr_allow_any_host \
-	|| _fatal
-mkdir ${nvmet_cfs}/subsystems/${nvmet_subsystem}/namespaces/1 || _fatal
-echo -n $export_blockdev \
-	> ${nvmet_cfs}/subsystems/${nvmet_subsystem}/namespaces/1/device_path \
-	|| _fatal
-echo -n 1 \
-	> ${nvmet_cfs}/subsystems/${nvmet_subsystem}/namespaces/1/enable \
-	|| _fatal
+SUBSYS=nfmf-test
+#UUID=28732221-723c-4900-b794-73919f984fc8
 
-mkdir ${nvmet_cfs}/ports/1 || _fatal
-echo loop > ${nvmet_cfs}/ports/1/addr_trtype || _fatal
+_nvmet_create_loop_port 1
 
-ln -s ${nvmet_cfs}/subsystems/${nvmet_subsystem} \
-	${nvmet_cfs}/ports/1/subsystems/${nvmet_subsystem} || _fatal
+_nvmet_add_subsys ${SUBSYS}
+_nvmet_add_namespace ${SUBSYS} 1 ${export_blockdev} ${UUID}
+_nvmet_link_subsys_to_port ${SUBSYS} 1
 
-echo "transport=loop,nqn=${nvmet_subsystem}" > /dev/nvme-fabrics || _fatal
+echo "transport=loop,nqn=${SUBSYS}" > /dev/nvme-fabrics || _fatal
+
+N=10
+while [[ ! -b /dev/nvme0n1 && $((N--)) -gt 0 ]]; do
+    sleep 1
+done
+[[ -b /dev/nvme0n1 ]] || _fatal "/dev/nvme0n1 did not appear"
 
 set +x
 
-echo "$export_blockdev mapped via NVMe loopback"
+echo "$export_blockdev mapped via NVMe loopback:"
+ls /dev/nvme[0-9]*n[0-9]*
