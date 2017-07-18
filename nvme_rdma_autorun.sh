@@ -64,14 +64,15 @@ modprobe rdma-rxe
 modprobe nvme-core
 modprobe nvme-fabrics
 modprobe nvme-rdma
+modprobe nvmet-rdma
 modprobe nvmet
 modprobe zram num_devices="0"
 
 for i in $DYN_DEBUG_MODULES; do
-	echo "module $i +pf" > /sys/kernel/debug/dynamic_debug/control || _fatal
+	echo "module $i +pf" > /sys/kernel/debug/dynamic_debug/control
 done
 for i in $DYN_DEBUG_FILES; do
-	echo "file $i +pf" > /sys/kernel/debug/dynamic_debug/control || _fatal
+	echo "file $i +pf" > /sys/kernel/debug/dynamic_debug/control
 done
 
 echo eth0 > /sys/module/rdma_rxe/parameters/add
