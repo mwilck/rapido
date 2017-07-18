@@ -54,6 +54,9 @@ fi
 ip link set eth0 mtu ${BR_MTU:-9000}
 #sleep 5 # give the network stack some time
 
+# Module crc32 is ambiguous on some kernels (kernel/lib and kernel/crypto)
+# MUST load the crypto/crc32 module like this, all else fails.
+insmod /lib/modules/*/kernel/crypto/crc32.ko
 modprobe ib_core
 modprobe ib_uverbs
 modprobe rdma_ucm

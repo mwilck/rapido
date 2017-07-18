@@ -19,13 +19,13 @@ _rt_require_dracut_args
 _rt_require_lib "libkeyutils.so.1"
 
 "$DRACUT" --install "tail blockdev ps rmdir resize dd vim grep find df sha256sum \
-		   strace mkfs.xfs killall nvme \
+		   strace mkfs.xfs killall nvme insmod \
 		   $LIBS_INSTALL_LIST" \
 	--include "$RAPIDO_DIR/nvme_rdma_autorun.sh" "/.profile" \
 	--include "$RAPIDO_DIR/rapido.conf" "/rapido.conf" \
 	--include "$RAPIDO_DIR/vm_autorun.env" "/vm_autorun.env" \
 	--add-drivers "nvme-core nvme-fabrics nvme-rdma nvmet nvmet-rdma \
-		       rdma_rxe zram lzo ib_core ib_uverbs rdma_ucm" \
+		       rdma_rxe zram lzo ib_core ib_uverbs rdma_ucm crc32" \
 	--modules "bash base network ifcfg" \
 	$DRACUT_EXTRA_ARGS \
 	$DRACUT_OUT
