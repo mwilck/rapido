@@ -21,7 +21,14 @@ Rapido has a pretty minimal set of dependencies, which should be present
 on all major Linux distributions.
 - Dracut
 - qemu / KVM
-- tunctl for VM network provisioning
+- brctl, tunctl, and dnsmasq for VM network provisioning
+
+The individual scenarious created by "cut_" scripts (see below) may
+need additional software, such as
+- killall (psmisc), resize (xterm-bin)
+- mkfs.xfs (xfsprogs)
+- nvme (nvme-cli)
+- multipathd (multipath-tools), sg3_utils
 
 Once all dependencies have been installed, Rapido can be configured via
 rapido.conf. At a minimum, the VM network configuration and Linux kernel
