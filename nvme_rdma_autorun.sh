@@ -112,7 +112,7 @@ ip link show eth0 | grep $MAC_ADDR2
 if [ $? -eq 0 ]; then
 	nvme connect -t rdma -a $IP_ADDR1 -s 4420 -n nvmf-test || _fatal
 	udevadm settle
-	nvmedev=$(ls /dev/ | grep -Eo /dev/nvme[0-9]n[0-0])
+	nvmedev=$(ls /dev/ | grep -Eo 'nvme[0-9]n[0-9]')
 	set +x
 	echo "Remote NVMe over RDMA $IP_ADDR1 mapped to $nvmedev"
 fi
