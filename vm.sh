@@ -47,8 +47,10 @@ function _vm_start
 	if [ -n "$(_rt_xattr_vm_networkless_get ${DRACUT_OUT})" ]; then
 		# this image doesn't require network access
 		kern_ip_addr="none"
+		neednet=
 		qemu_netdev="-net none"	# override default (-net nic -net user)
 	else
+		neednet=rd.neednet=1
 		eval local mac_addr='$MAC_ADDR'${vm_num}
 		eval local tap='$TAP_DEV'$((vm_num - 1))
 		[ -n "$tap" ] \
@@ -83,7 +85,7 @@ function _vm_start
 		$vm_resources \
 		-kernel "$kernel_img" \
 		-initrd "$DRACUT_OUT" \
-		-append "ip=${kern_ip_addr} rd.systemd.unit=rescue.target \
+		-append "ip=${kern_ip_addr} $neednet rd.systemd.unit=rescue.target \
 		         rd.shell=1 console=ttyS0 rd.lvm=0 rd.luks=0" \
 		-pidfile "$vm_pid_file" \
 		$qemu_more_args
