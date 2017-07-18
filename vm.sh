@@ -83,7 +83,7 @@ function _vm_start
 		$vm_resources \
 		-kernel "$kernel_img" \
 		-initrd "$DRACUT_OUT" \
-		-append "ip=${kern_ip_addr} rd.systemd.unit=emergency \
+		-append "ip=${kern_ip_addr} rd.systemd.unit=rescue.target \
 		         rd.shell=1 console=ttyS0 rd.lvm=0 rd.luks=0" \
 		-pidfile "$vm_pid_file" \
 		$qemu_more_args
