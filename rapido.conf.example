@@ -126,6 +126,14 @@ CEPH_RBD_IMAGE="iscsi_test"
 CEPH_RBD_IMAGE_MB="4096"
 ###########################
 
+##### multipath globals #####
+# Path to a directory containing compiled multipath binaries.
+# Run "make install DESTDIR=$dir" in the multipath sources
+# and set MULTIPATH_DESTDIR=$dir here.
+# Use for testing multipath-tools development versions.
+# If empty, system multipath-tools will be used.
+#MULTIPATH_DESTDIR=
+
 ####### lio_local_autorun, lio_rbd_autorun and rbd_autorun #######
 # IQN for the iSCSI target configured by lio_*_autorun.sh
 TARGET_IQN="iqn.2003-01.org.linux-iscsi:rapido"
