@@ -51,7 +51,7 @@ if [ $? -ne 0 ]; then
 	mount -t configfs configfs /sys/kernel/config/
 fi
 
-#ip link set eth0 mtu 9000
+ip link set eth0 mtu ${BR_MTU:-9000}
 #sleep 5 # give the network stack some time
 
 modprobe ib_core

@@ -31,8 +31,10 @@ if [ -n "$BR_ADDR" ]; then
 fi
 
 if [ -n "$BR_IF" ]; then
-	ip link set $BR_IF master $BR_DEV || exit 1
-	unwind="ip link set $BR_IF nomaster; ${unwind}"
+	old_mtu=$(cat /sys/class/net/$BR_IF/mtu)
+	[ -n "$old_mtu" ] || old_mtu=1500
+	ip link set $BR_IF master $BR_DEV mtu ${BR_MTU:-9000} || exit 1
+	unwind="ip link set $BR_IF nomaster mtu ${old_mtu}; ${unwind}"
 	echo -n ", connected to $BR_IF"
 fi
 echo
@@ -52,10 +54,12 @@ echo "+ created $TAP_DEV1"
 
 ip link set dev $BR_DEV up || exit 1
 unwind="ip link set dev $BR_DEV down; ${unwind}"
-ip link set dev $TAP_DEV0 up || exit 1
+ip link set dev $TAP_DEV0 up mtu ${BR_MTU:-9000} || exit 1
 unwind="ip link set dev $TAP_DEV0 down; ${unwind}"
-ip link set dev $TAP_DEV1 up || exit 1
+ip link set dev $TAP_DEV1 up mtu ${BR_MTU:-9000} || exit 1
 unwind="ip link set dev $TAP_DEV1 down; ${unwind}"
+ip link set dev $BR_DEV mtu ${BR_MTU:-9000} || exit 1
+tc qdisc add dev $BR_DEV root pfifo_fast || exit 1
 
 if [ -n "$BR_DHCP_SRV_RANGE" ]; then
 	hosts=
@@ -76,3 +80,6 @@ fi
 
 # success! clear unwind
 unwind=""
+if [[ -n "$BR_IF" && -n "$old_mtu" && ${BR_MTU:-9000} -ne $old_mtu ]]; then
+	echo "WARNING: old MTU=$old_mtu on $BR_IF will not be restored by br_teardown.sh" >&2
+fi

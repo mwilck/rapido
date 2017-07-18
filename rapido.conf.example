@@ -16,9 +16,15 @@ KERNEL_INSTALL_MOD_PATH="${KERNEL_SRC}/mods"
 # e.g. BR_DEV="br0"
 BR_DEV="br0"
 
+# MTU to use for bridge and slave devices. Default is 9000
+#BR_MTU=
+
 # If specified, a physical network interface to be connected to the bridge.
 # This should only be necessary if you wish to connect to the rapido VMs from a
 # remote host.
+# NOTICE: mtu will be set to BR_MTU on this device by br_setup.sh and must
+# be restored to the old value manually if necessary (br_teardown.sh will
+# not restore the mtu).
 # e.g. BR_IF="eth0"
 #BR_IF=""
 
