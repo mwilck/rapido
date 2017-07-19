@@ -134,6 +134,11 @@ CEPH_RBD_IMAGE_MB="4096"
 # If empty, system multipath-tools will be used.
 #MULTIPATH_DESTDIR=
 
+##### NVMe #####
+# Path to a self-combined binary for nvme-cli
+# if unset, nvme will be installed from system
+#NVME_CLI=
+
 ####### lio_local_autorun, lio_rbd_autorun and rbd_autorun #######
 # IQN for the iSCSI target configured by lio_*_autorun.sh
 TARGET_IQN="iqn.2003-01.org.linux-iscsi:rapido"
