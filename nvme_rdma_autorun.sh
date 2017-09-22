@@ -76,9 +76,9 @@ for i in $DYN_DEBUG_FILES; do
 done
 
 # These flood the log with state machine messages
-for i in rxe_comp.c rxe_resp.c; do
-	echo "file $i format \"state = %s\" -pf" > /sys/kernel/debug/dynamic_debug/control
-done
+#for i in rxe_comp.c rxe_resp.c; do
+#	echo "file $i format \"state = %s\" -pf" > /sys/kernel/debug/dynamic_debug/control
+#done
 
 echo eth0 > /sys/module/rdma_rxe/parameters/add
 

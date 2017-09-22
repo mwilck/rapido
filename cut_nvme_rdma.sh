@@ -43,3 +43,4 @@ EOF
 	$DRACUT_OUT
 
 rm -f "$HOOK"
+_rt_xattr_cmdline_set $DRACUT_OUT "log_buf_len=4M"
