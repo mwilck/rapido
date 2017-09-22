@@ -78,6 +78,8 @@ function _vm_start
 	local vm_resources="$(_rt_xattr_vm_resources_get ${DRACUT_OUT})"
 	[ -n "$vm_resources" ] || vm_resources="-smp cpus=2 -m 512"
 
+	local extra_cmdline="$(_rt_xattr_cmdline_get ${DRACUT_OUT})"
+
 	[ -f "$kernel_img" ] \
 	   || _fail "no kernel image present at ${kernel_img}. Build needed?"
 
@@ -86,7 +88,7 @@ function _vm_start
 		-kernel "$kernel_img" \
 		-initrd "$DRACUT_OUT" \
 		-append "ip=${kern_ip_addr} $neednet rd.systemd.unit=rescue.target \
-		         rd.shell=1 console=ttyS0 rd.lvm=0 rd.luks=0" \
+		         rd.shell=1 console=ttyS0 rd.lvm=0 rd.luks=0 $extra_cmdline" \
 		-pidfile "$vm_pid_file" \
 		$qemu_more_args
 	exit $?
