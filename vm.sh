@@ -53,6 +53,7 @@ function _vm_start
 		neednet=rd.neednet=1
 		eval local mac_addr='$MAC_ADDR'${vm_num}
 		eval local tap='$TAP_DEV'$((vm_num - 1))
+		local netdev=nw1
 		[ -n "$tap" ] \
 			|| _fail "TAP_DEV$((vm_num - 1)) not configured"
 		eval local is_dhcp='$IP_ADDR'${vm_num}'_DHCP'
@@ -67,12 +68,16 @@ function _vm_start
 				|| _fail "IP_ADDR${vm_num} not configured"
 			kern_ip_addr="${ip_addr}:::255.255.255.0:${hostname}"
 		fi
-		qemu_netdev="-device e1000,netdev=nw1,mac=${mac_addr} \
+		qemu_netdev="-device e1000,netdev=$netdev,mac=${mac_addr} \
 			-netdev tap,id=nw1,script=no,downscript=no,ifname=${tap}"
 	fi
 
 	# cut_ script may have specified some parameters for qemu (9p share)
 	local qemu_cut_args="$(_rt_xattr_qemu_args_get ${DRACUT_OUT})"
+	qemu_cut_args=${qemu_cut_args//%%/@@__PERCENT__@@}
+	qemu_cut_args=${qemu_cut_args//%VM%/$vm_num}
+	qemu_cut_args=${qemu_cut_args//%NETDEV%/$netdev}
+	qemu_cut_args=${qemu_cut_args//@@__PERCENT__@@/%%}
 	local qemu_more_args="$qemu_netdev $QEMU_EXTRA_ARGS $qemu_cut_args"
 
 	local vm_resources="$(_rt_xattr_vm_resources_get ${DRACUT_OUT})"
