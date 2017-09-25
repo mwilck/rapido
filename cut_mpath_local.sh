@@ -26,6 +26,10 @@ _rt_require_multipath
 #    -drive if=none,id=hdb,file=/dev/zram4,cache=none,format=raw,serial=RAPIDO \
 #    -device scsi-hd,drive=hdb"
 #
+# CAUTION qemu 2.10 and newer need a different syntax to avoid locking problems:
+#     -blockdev driver=raw,node-name=hda,file.driver=file,file.filename=/dev/zram0,cache.direct=on,file.locking=off
+#     -device scsi-hd,drive=hda,serial=RAPIDO
+#
 # Once booted, you can simulate path failure by switching to the QEMU console
 # (ctrl-a c) and running "drive_del hda"
 
