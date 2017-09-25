@@ -18,6 +18,9 @@ RAPIDO_DIR="$(realpath -e ${0%/*})"
 _rt_require_dracut_args
 _rt_require_multipath
 
+[[ $BLKDEV_0 && -b "$BLKDEV_0" ]] || \
+    _fail "BLKDEV_0 must be set to a block device e.g. /dev/zram0 for this scenario"
+
 # the VM should be deployed with two virtio SCSI devices which share the same
 # backing <file> and <serial> parameters. E.g.
 #QEMU_EXTRA_ARGS="-nographic -device virtio-scsi-pci,id=scsi \
@@ -28,7 +31,7 @@ _rt_require_multipath
 #
 # CAUTION qemu 2.10 and newer need a different syntax to avoid locking problems:
 #     -blockdev driver=raw,node-name=hda,file.driver=file,file.filename=/dev/zram0,cache.direct=on,file.locking=off
-#     -device scsi-hd,drive=hda,serial=RAPIDO
+#     -device scsi-hd,drive=hda,serial=RAPIDO 
 #
 # Once booted, you can simulate path failure by switching to the QEMU console
 # (ctrl-a c) and running "drive_del hda"
@@ -46,3 +49,19 @@ _rt_require_multipath
 	|| _fail "dracut failed"
 
 _rt_xattr_vm_networkless_set "$DRACUT_OUT"
+
+if _rt_qemu_version_ge 2 10 0; then
+    _rt_xattr_qemu_args_set "$DRACUT_OUT" "\
+	-device virtio-scsi-pci,id=scsi
+	-blockdev driver=raw,node-name=hda,file.driver=file,file.filename=$BLKDEV_0,cache.direct=on,file.locking=off \
+	-device scsi-hd,drive=hda,serial=RAPIDO \
+	-blockdev driver=raw,node-name=hdb,file.driver=file,file.filename=$BLKDEV_0,cache.direct=on,file.locking=off \
+	-device scsi-hd,drive=hdb,serial=RAPIDO"
+else
+    _rt_xattr_qemu_args_set "$DRACUT_OUT" "\
+	-device virtio-scsi-pci,id=scsi
+	-drive if=none,id=hda,file=$BLKDEV_0,cache=none,format=raw,serial=RAPIDO \
+	-device scsi-hd,drive=hda \
+	-drive if=none,id=hdb,file=$BLKDEV_0,cache=none,format=raw,serial=RAPIDO \
+	-device scsi-hd,drive=hdb"
+fi
