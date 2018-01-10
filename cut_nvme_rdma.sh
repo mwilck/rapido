@@ -29,6 +29,7 @@ cat >"$HOOK" <<\EOF
 rootok=1
 EOF
 
+rm -f $DRACUT_OUT
 "$DRACUT" --install "tail blockdev ps rmdir resize dd vim grep find df sha256sum \
 		   strace mkfs.xfs killall insmod \
 		   $LIBS_INSTALL_LIST" \
