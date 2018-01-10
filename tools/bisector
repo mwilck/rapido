@@ -1,0 +1,213 @@
+#! /bin/bash
+MYDIR=$(dirname $0)
+[[ $MYDIR/err_handler.sh ]] || exit 1
+. $MYDIR/err_handler.sh
+
+SERVER_VM=sles12-sp2-gm-fcoe-server
+SERVER_HN=${SERVER_VM}.host0
+CLIENT_VM=tumbleweed-171117-udevtest
+CLIENT_HN=${CLIENT_VM}.host0
+
+BASE_DIR=/mnt/git
+#WORK_DIR=/broken-out-2
+WORK_DIR=/kernel-source/tmp/current
+COMP_DIR=$BASE_DIR/$WORK_DIR
+
+SSH_OPTS="-q -o ConnectTimeout=1"
+
+log () {
+    local T="$(date +%H:%M:%S)"
+    echo "$T" "$@" >&2
+    echo "======== $T $@ ========"
+}
+
+check_server() {
+    local hn=$1
+
+
+    [[ $hn ]]
+    ssh $SSH_OPTS root@$hn /bin/true
+}
+
+server_state() {
+    local vm=$1
+    local id name st
+    [[ $vm ]]
+    st=
+    while read id name st; do
+	case $name in
+	    $vm) break;;
+	esac
+    done < <(virsh list)
+    [[ $st ]] && echo "$st"
+}
+
+server_running() {
+    local vm=$1
+    local id name st
+    [[ $vm ]]
+    st=$(server_state "$vm")
+    case $st in
+	running) return 0;;
+	paused)
+	    virsh resume $vm && [[ $(server_state "$vm") = running ]]
+	    return
+	    ;;
+	*) return 1;;
+    esac
+}
+
+stop_vm() {
+    local ST N
+    [[ $1 ]]
+    if server_running "$1"; then
+	log stopping $1
+	virsh shutdown "$1"
+	ST=$(date +%s)
+	N=$ST
+	while [[ $((N-ST)) -lt 60 ]]; do
+	    if server_state "$1" >/dev/null; then
+		sleep 5
+		N=$(date +%s)
+	    else
+		return 0
+	    fi
+	done
+	if server_state "$1" >/dev/null; then
+	    virsh destroy "$1"
+	fi
+	if server_state "$1" >/dev/null; then
+	    return 1
+	fi
+    fi
+    return 0
+}
+
+start_vm() {
+    local vm=$1 hn=$2
+    local N ST
+    [[ $vm && $hn ]]
+    check_server "$hn" && return 0
+    stop_vm "$vm"
+    log starting $vm
+    virsh start "$vm"
+    ST=$(date +%s)
+    N=$ST
+    while [[ $((N-ST)) -lt 60 ]]; do
+	check_server "$hn" && break
+	sleep 5
+	N=$(date +%s)
+    done
+    [[ $((N-ST)) -lt 60 ]]
+}
+
+
+run_remote() {
+    local vm=$1 pr result
+    local log=/tmp/test-$$.log
+    local script=$log.sh
+    [[ $vm ]]
+    rm -f "$log"
+    ssh $SSH_OPTIONS "root@$vm" cat '>' "$script" <<EOF
+rm -f "$log"
+exec &>"$log"
+EOF
+    ssh $SSH_OPTIONS "root@$vm" cat '>>' "$script"
+    pr=$(ssh $SSH_OPTIONS "root@$vm" cat "$script")
+    if ssh $SSH_OPTIONS "root@$vm" /bin/bash "$script"; then
+	result=0
+    else
+	result=1
+	log "error on $vm, script was:
+$pr"
+    fi
+    scp $SSH_OPTIONS "root@$vm:$log" "$log" || true
+    cat "$log" || true
+    return $result
+}
+
+run_test() {
+    local vm=$1
+    [[ $vm ]]
+    log running test on $vm
+    run_remote "$vm" <<EOF
+/mnt/fcoe/scripts/setup.sh  -v -l verbose -c /mnt/fcoe/scripts/fcoe-vm-vm-vlan2.sh
+sleep 1
+bash /mnt/fcoe/scripts/enable.sh 1
+sleep 10
+LUNS=\$(lsscsi)
+for x in \$(find /sys/class/fc_remote_ports -type f -o -type l); do
+    echo -n "\$x: "
+    if [[ -L "\$x" ]]; then
+       readlink -f "\$x"
+    else
+       cat "\$x"
+    fi
+done
+find /dev/disk -ls
+journalctl -b -k
+bash /mnt/fcoe/scripts/enable.sh 0
+/mnt/fcoe/scripts/cleanup.sh
+echo "\$LUNS"
+grep 'LIO-ORG *FILEIO' <<<"\$LUNS"
+EOF
+}
+
+compile_kernel() {
+    #config=$(cat $COMP_DIR/.config)
+    [[ -d $COMP_DIR ]]
+    log compiling kernel in $COMP_DIR
+    (cd $COMP_DIR
+     make olddefconfig
+     make -j4)
+}
+
+install_kernel() {
+    local dir=$2
+    local vm=$1
+    [[ $dir && $vm ]]
+    log installing kernel from $dir on $vm
+    run_remote "$vm" <<EOF
+set -e
+#set -x
+grep -q /mnt/git /proc/mounts || mount /mnt/git
+trap 'umount -l /mnt/git' 0
+cd /mnt/git$dir
+rel=\$(sed -n 's/^.*"\\([^"]*\\)".*\$/\\1/p' include/generated/utsrelease.h)
+[[ \$rel ]]
+echo installing kernel \$rel
+rm -fv /boot/*\${rel}*
+make INST_MOD_STRIP=1 modules_install
+make INST_MOD_STRIP=1 install
+title=\$(sed -n "s/^.*menuentry '\\(openSUSE.* Linux \$rel\\)'.*\$/\\1/p" /boot/grub2/grub.cfg)
+[[ \$title ]]
+echo setting default to "\${title}"
+grub2-set-default "Advanced options for openSUSE Tumbleweed>\${title}"
+EOF
+}
+
+compile_kernel
+
+start_vm "$CLIENT_VM" "$CLIENT_HN"
+install_kernel "$CLIENT_HN" "$WORK_DIR"
+stop_vm "$CLIENT_VM"
+
+start_vm "$SERVER_VM" "$SERVER_HN" &
+spid=$!
+start_vm "$CLIENT_VM" "$CLIENT_HN"
+wait $spid
+
+if run_test "$CLIENT_HN"; then
+    result=0
+else
+    result=1
+fi
+run_remote "$SERVER_HN" <<EOF
+journalctl -k -b
+EOF
+
+stop_vm "$CLIENT_VM"
+stop_vm "$SERVER_VM"
+
+log result=$result
+exit $result
