@@ -61,9 +61,9 @@ function _nvmet_add_namespace() {
 function _nvmet_create_loop_port() {
 	local port=$1
 	mkdir ${_NVMET_CFS}/ports/${port} \
-	    || _fatal "failed to create nvmet port $port"
+	    || { echo  "failed to create nvmet port $port"; return 1; }
 	echo loop >${_NVMET_CFS}/ports/${port}/addr_trtype \
-	    || _fatal "failed to set addr_trtype=loop for port $port"
+	    || { echo "failed to set addr_trtype=loop for port $port"; return 1; }
 }
 
 function _nvmet_link_subsys_to_port() {
