@@ -19,7 +19,7 @@ set -x
 
 TUNCTL=$(which tunctl) || _fail "tunctl missing"
 
-if [ -n "$BR_DHCP_SRV_RANGE" ]; then
+if [[ o"$BR_DHCP_SRV" = oyes ]]; then
 	dnsmasq_pid=`ps -eo pid,args | grep -v grep | grep dnsmasq \
 			| grep -- --interface=$BR_DEV \
 			| grep -- --dhcp-range=$BR_DHCP_SRV_RANGE \

@@ -19,6 +19,12 @@ BR_DEV="br0"
 # MTU to use for bridge and slave devices. Default is 9000
 #BR_MTU=
 
+# Use this to specify a subnet to use for IP addresses.
+# If this is set, *all* IP Addresses below must be specified as
+# $BR_SUBNET.$SUFFI, e.g. IP_ADDR1=$BR_SUBNET.17
+# MANDATORY with VLANs!
+SUBNET="192.168.155"
+
 # If specified, a physical network interface to be connected to the bridge.
 # This should only be necessary if you wish to connect to the rapido VMs from a
 # remote host.
@@ -29,11 +35,10 @@ BR_DEV="br0"
 #BR_IF=""
 
 # if specified, an address to configure for the bridge device
-BR_ADDR="192.168.155.1/24"
+BR_ADDR="$SUBNET.1/24"
 
-# if specified, start a dhcp server, listening on $BR_DEV
-# e.g. BR_DHCP_SRV_RANGE="192.168.155.10,192.168.155.20,12h"
-#BR_DHCP_SRV_RANGE=""
+# if set to "yes", start a dhcp server, listening on $BR_DEV
+BR_DHCP_SRV="yes"
 
 # Tap VM network device owner
 # e.g. TAP_USER="me"
@@ -80,7 +85,7 @@ MAC_ADDR1=""
 #IP_ADDR1_DHCP="1"
 
 # IP address assigned to the VM during boot
-IP_ADDR1="192.168.155.101"
+IP_ADDR1="$SUBNET.101"
 
 # Static hostname assigned to the VM
 HOSTNAME1="rapido1"
@@ -98,7 +103,7 @@ MAC_ADDR2=""
 #IP_ADDR2_DHCP="1"
 
 # Static IP address assigned to the VM during boot
-IP_ADDR2="192.168.155.102"
+IP_ADDR2="$SUBNET.102"
 
 # Static hostname assigned to the VM
 HOSTNAME2="rapido2"
