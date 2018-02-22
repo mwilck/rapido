@@ -1,0 +1,8 @@
+#! /bin/bash
+trap 'echo error in $BASH_COMMAND on line $LINENO >&2; exit 1' ERR
+. rapido.conf
+
+CPUS=$(set -- /sys/devices/system/cpu/cpu[0-9]*; echo $#)
+make -C "${KERNEL_SRC}" -j${CPUS:-1}
+make -C "${KERNEL_SRC}" INSTALL_MOD_STRIP=1 \
+     INSTALL_MOD_PATH="${KERNEL_INSTALL_MOD_PATH}" modules_install
