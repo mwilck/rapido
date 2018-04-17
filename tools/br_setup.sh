@@ -61,18 +61,51 @@ unwind="ip link set dev $TAP_DEV1 down; ${unwind}"
 ip link set dev $BR_DEV mtu ${BR_MTU:-9000} || exit 1
 tc qdisc add dev $BR_DEV root pfifo_fast || exit 1
 
+vlan=0
+VL_IFS=""
+VL_RANGES=""
+while [[ $vlan -lt ${#VLANS[@]} ]]; do
+	ip link add link $BR_DEV name $BR_DEV.$vlan type vlan id $vlan || exit 1
+	unwind="ip link del $BR_DEV.$vlan; ${unwind}"
+	ip link set dev $BR_DEV.$vlan up || exit 1
+	unwind="ip link set dev $BR_DEV.$vlan down; ${unwind}"
+	ip link set dev $BR_DEV.$vlan mtu ${BR_MTU:-9000} || exit 1
+	tc qdisc add dev $BR_DEV.$vlan root pfifo_fast || exit 1
+	ip addr add ${VLANS[$vlan]}.1/24 dev $BR_DEV.$vlan|| exit 1
+	unwind="ip addr flush dev $BR_DEV.$vlan; ${unwind}"
+	VL_IFS="$VL_IFS --interface=$BR_DEV.$vlan"
+	VL_RANGES="$VL_RANGES --dhcp-range=${VLANS[$vlan]}.10,${VLANS[$vlan]}.100,1h"
+	: $((++vlan))
+done
+
+dhcp_host() {
+	local mac=$1 ip=$2 name=$3
+	local nv params vl vip
+	params="--dhcp-host=$mac,$ip,${name}"
+	nv=0
+	for vl in ${VLANS[@]}; do
+		vip=${vl}${ip#$SUBNET}
+		params="$params --dhcp-host=$mac,${vip},${name}_v${nv}"
+		: $((nv++))
+	done
+	echo "$params"
+}
+
 if [[ o"$BR_DHCP_SRV" = oyes ]]; then
 	hosts=
 	[ -n "$IP_ADDR1" ] && \
-		hosts="$hosts --dhcp-host=$MAC_ADDR1,$IP_ADDR1,${HOSTNAME1:-vm1}"
+		hosts="$hosts $(dhcp_host $MAC_ADDR1 $IP_ADDR1 ${HOSTNAME1:-vm1})"
+
 	[ -n "$IP_ADDR2" ] && \
-		hosts="$hosts --dhcp-host=$MAC_ADDR2,$IP_ADDR2,${HOSTNAME2:-vm2}"
+		hosts="$hosts $(dhcp_host $MAC_ADDR2 $IP_ADDR2 ${HOSTNAME2:-vm2})"
+
 	dnsmasq --no-hosts --no-resolv \
 		--pid-file=/var/run/rapido-dnsmasq-$$.pid \
 		--bind-interfaces \
-		--interface="$BR_DEV" \
+		--interface="$BR_DEV" $VL_IFS \
 		--except-interface=lo \
 		--dhcp-range="$SUBNET.10,$SUBNET.100,1h" \
+		$VL_RANGES \
 		${hosts} || exit 1
 	unwind="kill $(cat /var/run/rapido-dnsmasq-$$.pid); ${unwind}"
 	echo "+ started DHCP server"

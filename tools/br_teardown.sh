@@ -26,10 +26,17 @@ if [[ o"$BR_DHCP_SRV" = oyes ]]; then
 			| awk '{print $1}'`
 	if [ -z "$dnsmasq_pid" ]; then
 		echo "failed to find dnsmasq process"
-		exit 1
+	else
+		kill "$dnsmasq_pid"
 	fi
-	kill "$dnsmasq_pid"
 fi
+vlan=0
+while [[ $vlan -lt ${#VLANS[@]} ]]; do
+	ip addr flush dev $BR_DEV.$vlan
+	ip link set dev $BR_DEV.$vlan down
+	ip link del $BR_DEV.$vlan
+	: $((++vlan))
+done
 
 ip link set dev $TAP_DEV1 down || exit 1
 ip link set dev $TAP_DEV0 down || exit 1

@@ -25,6 +25,10 @@ BR_DEV="br0"
 # MANDATORY with VLANs!
 SUBNET="192.168.155"
 
+# VLANs to create, one subnet for each shell array
+# VLANS=("192.168.201" "192.168.202" "192.168.203" "192.168.204")
+#VLANS=(192.168.201)
+
 # If specified, a physical network interface to be connected to the bridge.
 # This should only be necessary if you wish to connect to the rapido VMs from a
 # remote host.
