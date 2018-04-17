@@ -10,7 +10,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 # License for more details.
 
-_NVMET_CFS="/sys/kernel/config/nvmet/"
+_NVMET_CFS="/sys/kernel/config/nvmet"
 
 function _nvmet_add_subsys() {
 	local subsys=$1
@@ -64,6 +64,17 @@ function _nvmet_create_loop_port() {
 	    || { echo  "failed to create nvmet port $port"; return 1; }
 	echo loop >${_NVMET_CFS}/ports/${port}/addr_trtype \
 	    || { echo "failed to set addr_trtype=loop for port $port"; return 1; }
+}
+
+function _nvmet_create_rdma_port() {
+	local port=$1 ip=$2
+	mkdir ${_NVMET_CFS}/ports/${port} \
+	    || { echo  "failed to create nvmet port $port"; return 1; }
+	echo rdma >${_NVMET_CFS}/ports/${port}/addr_trtype \
+	    || { echo "failed to set addr_trtype=rdma for port $port"; return 1; }
+	echo $ip >${_NVMET_CFS}/ports/${port}/addr_traddr
+	echo ipv4 >${_NVMET_CFS}/ports/${port}/addr_adrfam
+	echo 4420 >${_NVMET_CFS}/ports/${port}/addr_trsvcid
 }
 
 function _nvmet_link_subsys_to_port() {
