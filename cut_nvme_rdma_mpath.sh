@@ -77,7 +77,7 @@ rm -f $DRACUT_OUT
 	$DRACUT_OUT
 
 rm -f "$HOOK"
-_rt_xattr_cmdline_set $DRACUT_OUT "log_buf_len=4M"
+_rt_xattr_cmdline_set $DRACUT_OUT "log_buf_len=1M e1000.RxDescriptors=512"
 
 _rt_xattr_qemu_args_set \
     $DRACUT_OUT \
