@@ -49,17 +49,13 @@ modprobe ib_core
 modprobe ib_uverbs
 modprobe rdma_ucm
 modprobe rdma-rxe
-modprobe nvme-core
+modprobe nvme-core  #multipath=0
 modprobe nvme-fabrics
 modprobe nvme-rdma
 modprobe nvmet-rdma
 modprobe nvmet
 modprobe zram num_devices="0"
-modprobe bfq
-modprobe cfq-iosched
-modprobe deadline-iosched
-modprobe kyber-iosched
-modprobe mq-deadline
+modprobe dm-multipath
 
 for i in $DYN_DEBUG_MODULES; do
 	echo "module $i +pf" > /sys/kernel/debug/dynamic_debug/control
@@ -81,19 +77,13 @@ SUBSYS="rapnv"
 
 mkdir -p /var/lib/dhcp
 
-echo eth0 > /sys/module/rdma_rxe/parameters/add
-cat >/etc/udev/rules.d/60-sched.rules<<EOF
-ACTION!="add", GOTO="ssd_scheduler_end"
-SUBSYSTEM!="block", GOTO="ssd_scheduler_end"
-
-TEST=="%S%p/mq", ENV{.IS_MQ}="1"
-ENV{.IS_MQ}=="1", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="kyber", ENV{SCHED}="kyber"
-ENV{.IS_MQ}=="1", ATTR{queue/rotational}!="0", ATTR{queue/scheduler}="bfq", ENV{SCHED}="bfq"
-ENV{.IS_MQ}!="1", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="deadline", ENV{SCHED}="deadline"
-ENV{.IS_MQ}!="1", ATTR{queue/rotational}!="0", ATTR{queue/scheduler}="cfq", ENV{SCHED}="cfq"
-
-LABEL="ssd_scheduler_end"
+cat >/etc/multipath.conf <<EOF
+defaults {
+	 find_multipaths greedy
+}
 EOF
+
+echo eth0 > /sys/module/rdma_rxe/parameters/add
 
 nvl=0
 while [[ $nvl -lt ${#VLANS[@]} ]]; do
