@@ -101,47 +101,41 @@ if [ $? -eq 0 ]; then
 		_fatal
 	_nvmet_add_namespace ${SUBSYS} 1 ${BLKDEV}
 
-#	_nvmet_create_rdma_port 1 ${IP_ADDR1}
-#	_nvmet_link_subsys_to_port ${SUBSYS} 1
-
 	np=1
 	for vl in ${VLANS[@]}; do
 		_nvmet_create_rdma_port $np ${vl}${IP_ADDR1#$SUBNET}
 		_nvmet_link_subsys_to_port ${SUBSYS} $np
 		: $((np++))
-#		break
 	done
-
-#	ln -s /sys/kernel/config/nvmet/subsystems/rapnv /sys/kernel/config/nvmet/ports/1/subsystems/rapnv
-#	echo rxe0 >/sys/module/rdma_rxe/parameters/remove
-#	echo eth0 >/sys/module/rdma_rxe/parameters/add
-#	ln -s /sys/kernel/config/nvmet/subsystems/rapnv /sys/kernel/config/nvmet/ports/1/subsystems/rapnv
-	#	dmesg | less +F
-	#rxe_cfg add eth0
-	#rxe_cfg status
-	#rdma_server
+	#rping -a 192.168.201.101 -s -d -S 128 &
 fi
 
 ip link show eth0 | grep $MAC_ADDR2
 if [ $? -eq 0 ]; then
-#	nvme connect -t rdma -a $IP_ADDR1 -s 4420 -n ${SUBSYS} # || _fatal
-#	echo eth0 >/sys/module/rdma_rxe/parameters/add
+    #rping -c -a 192.168.201.101 -C 10 -S 128 -d
 	for vl in ${VLANS[@]}; do
 	    nvme discover -t rdma -a ${vl}${IP_ADDR1#$SUBNET} -s 4420
 	    nvme connect -t rdma -a ${vl}${IP_ADDR1#$SUBNET} -s 4420 -n ${SUBSYS} # || _fatal
 	done
 	udevadm settle
-	nvmedev=$(ls /dev/ | grep -Eo 'nvme[0-9]n[0-9]')
+#	nvmedev=$(ls /dev/ | grep -Eo 'nvme[0-9]n[0-9]')
+#	echo nvmedev=$nvmedev#
+	multipathd -d -v2 &>/tmp/mp.log &
+	sleep 2
 	multipath -ll
 	multipathd show maps
-	multipathd show paths
-#	set +x
-#	dmesg | less +F
+#	multipathd show paths
+#	cat /tmp/mp.log
 #	rxe_cfg add eth0
 #	rxe_cfg status
 #	rdma_client -s ${IP_ADDR1}
 #	rdma_client -s ${VLANS[0]}${IP_ADDR1#$SUBNET}
+	dd if=/dev/zero of=/dev/nvme0n1 bs=4M count=32 oflag=direct
 fi
 
-
+#modprobe ib700wdt timeout=15 nowayout=1
+#echo >/dev/watchdog
+#set +x
+#N=0
+#while true; do echo $((++N)); sleep 1; done
 
